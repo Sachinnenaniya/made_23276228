@@ -24,7 +24,7 @@ pipeline TemperatureDataPipeline {
 
 
 
-    // Define the blocks used
+    // Define the blocks used 
 
     block dataExtractor oftype HttpExtractor {
         url: "https://www.mowesta.com/data/measure/mowesta-dataset-20221107.zip";
