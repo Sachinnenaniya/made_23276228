@@ -1,0 +1,76 @@
+pipeline GTFSStopsPipeline {
+
+    // Stage 1: Extract and interpret stops data from the GTFS feed
+    Stage1: ExtractToCSV {
+        Extractor
+            -> FileSelector
+            -> UTF8TextInterpreter
+            -> CSVFormatInterpreter;
+    }
+
+    // Stage 2: Process CSV data and load into SQLite database
+    Stage2: ProcessAndLoad {
+        CSVFormatInterpreter
+            -> ColumnRemover
+            -> TableInterpreter
+            -> SQLiteDBLoader;
+    }
+
+    // Extract GTFS data from a given URL
+    component Extractor oftype GTFSExtractor {
+        sourceURL: "https://gtfs.rhoenenergie-bus.de/GTFS.zip"; // GTFS zip file URL
+    }
+
+    // Interpret the text file using UTF-8 encoding
+    component UTF8TextInterpreter oftype TextFileInterpreter {
+        charset: "utf8"; // File encoding
+    }
+
+    // Interpret the file as CSV format
+    component CSVFormatInterpreter oftype CSVInterpreter {
+        csvDelimiter: ","; // CSV delimiter
+        textEncloser: '"'; // Text enclosing character
+    }
+
+    // Select the stops.txt file from the extracted data
+    component FileSelector oftype FilePicker {
+        filePath: "/stops.txt"; // File path
+    }
+
+    // Remove unnecessary columns from the CSV data
+    component ColumnRemover oftype ColumnDeleter {
+        columnsToDelete: [
+            column B, column D, column H, column I, column J, column K, column L
+        ]; // Columns to delete
+    }
+
+    // Define the structure of the stops data table
+    component TableInterpreter oftype TableInterpreter {
+        hasHeader: false; // No header row in the file
+        columnDefinitions: [
+            "stop_id" as integer, // stop_id as integer
+            "stop_name" as text, // stop_name as text
+            "stop_lat" as decimal, // stop_lat as decimal
+            "stop_lon" as decimal, // stop_lon as decimal
+            "zone_id" as customZoneID // zone_id as custom type
+        ];
+    }
+
+    // Load the processed data into an SQLite database
+    component SQLiteDBLoader oftype SQLiteLoader {
+        tableName: "stops"; // Table name in SQLite
+        databaseFile: "./gtfs.sqlite"; // SQLite database file path
+    }
+
+}
+
+// Define a custom value type for zone_id with constraints
+type customZoneID as integer {
+    rules: [
+        ValidZoneIDOnly, // Ensure only valid zone IDs
+    ];
+}
+
+// Constraint definition for valid zone IDs
+constraint ValidZoneIDOnly on integer:
+    value == 1645; // Accept only zone_id with value 1645
